@@ -4,12 +4,15 @@
 `define PHASE_GETCMD 2'b00
 `define PHASE_GETARG 2'b01
 `define PHASE_EXEC1  2'b10
-`define PHASE_EXEC2	 2'b11
+`define PHASE_EXEC2  2'b11
+
+`define SIZE 256*256
 
 module command_processor(
 
 	input clk,			  // clock
-	input mem_response,   // used for memory sync
+	input mem_response,   // await memory response and do nothing
+	input periph_response,
 
 	input [15:0]mem_read, // values from memory are received here
 
@@ -18,8 +21,9 @@ module command_processor(
 
 	output reg mem_mode  =  0,		  // 1: write, 0: read
 	output reg mem_block = 0,		  // do nothing - await response from memory
+	output reg periph_block = 0,
 
-	output reg done = 0   // lit up when finish statement is encountered
+	output reg done = 0  // lit up when finish statement is encountered
 );
 	/*
 	 * Registers
@@ -30,7 +34,7 @@ module command_processor(
 						         // to rax..rdx but there are only 2 for simplicity
 						         
 	reg [15:0]cmd_ptr   = 0;     // instruction being executed
-	reg [15:0]stk_ptr   = 255;   // end of stack
+	reg [15:0]stk_ptr   = `SIZE-1;   // end of stack (next free cell; decreases as values are pushed)
 
 	reg [1:0]cpu_phase  = 0;     // 0 0 : read instruction;
 							     // 0 1 : read argument;
@@ -38,6 +42,9 @@ module command_processor(
 							     // 1 1 : command exec phase 2
 	reg [15:0]command;
 	reg [15:0]argument;
+
+	wire block;
+	assign block = mem_block | periph_block;
 	
 	initial begin
 		// 
@@ -55,9 +62,30 @@ module command_processor(
 			end
 			`PHASE_GETARG: begin
 				command = mem_read;
+
+				case(command) // skip arg request if it's irrelevant (inter-register ops)
+				16'hFA10,
+				16'hFA01,
+				16'h2A10,
+				16'h2A01,
 				
-				mem_locator = cmd_ptr + 1;
-				mem_block = 1;
+				16'hEC6E,
+				16'hC021,
+				16'hC120,
+				16'h0A10,
+				16'h0A11,
+				16'h0510,
+				16'h0511,
+				16'h1500,
+				16'h1501,
+				16'hFFFF: begin
+					// do nothing
+				end
+				default: begin
+					mem_locator = cmd_ptr + 1;
+					mem_block = 1;
+				end
+				endcase
 			end
 			`PHASE_EXEC1:  begin
 				argument = mem_read;
@@ -78,7 +106,22 @@ module command_processor(
 					// /!\ set write mode AFTER setting
 					//     locator and value!
 					mem_mode = `MMODE_WRITE;
-					
+					mem_block = 1;
+				end
+				16'hFA10: begin
+					mem_locator = reg_left;
+					mem_write = reg_right;
+					// /!\ set write mode AFTER setting
+					//	   locator and value!
+					mem_mode = `MMODE_WRITE;
+					mem_block = 1;
+				end
+				16'hFA01: begin
+					mem_locator = reg_right;
+					mem_write = reg_left;
+					// /!\ set write mode AFTER setting
+					//	   locator and value!
+					mem_mode = `MMODE_WRITE;
 					mem_block = 1;
 				end
 				16'h2000,
@@ -91,14 +134,84 @@ module command_processor(
 					mem_locator = argument;
 					mem_block = 1;
 				end
+				16'h2A01: begin
+					mem_mode = `MMODE_READ;
+					mem_locator = reg_left;
+					mem_block = 1;
+				end
+				16'h2A10: begin
+					mem_mode = `MMODE_READ;
+					mem_locator = reg_right;
+					mem_block = 1;
+				end	
+
+				// inter-register arithmetics and copying - skip next phase:
+
+				16'hEC6E: begin	// exchange register contents
+					reg_right <= reg_left;
+					reg_left <= reg_right;
+
+					cpu_phase += 1;
+					cmd_ptr += 1;
+				end
+				16'hC021: begin // copy LEFT to RIGHT
+					reg_right = reg_left;
+
+					cpu_phase += 1;
+					cmd_ptr += 1;
+				end
+				16'hC120: begin	// copy RIGHT to LEFT
+					reg_left = reg_right;
+
+					cpu_phase += 1;
+					cmd_ptr += 1;
+				end
+				16'h0A10: begin // add LEFT and RIGHT, store to LEFT
+					reg_left += reg_right;
+					
+					cpu_phase += 1;
+					cmd_ptr += 1;
+				end
+				16'h0A11: begin // add LEFT and RIGHT, store to RIGHT
+					reg_right += reg_left;
+					
+					cpu_phase += 1;
+					cmd_ptr += 1;
+				end
+				16'h0510: begin	// subtract RIGHT from LEFT, save to LEFT
+					reg_left -= reg_right;
+				
+					cpu_phase += 1;
+					cmd_ptr += 1;
+				end
+				16'h0511: begin	// subtract RIGHT from LEFT, save to RIGHT
+					reg_right = reg_left - reg_right;
+
+					cpu_phase += 1;
+					cmd_ptr += 1;
+				end
+				16'h1500: begin	// subtract LEFT from RIGHT, save to LEFT
+					reg_left = reg_right - reg_left;
+
+					cpu_phase += 1;
+					cmd_ptr += 1;
+				end
+				16'h1501: begin // subtract LEFT from RIGHT, save to RIGHT			
+					reg_right -= reg_left;
+
+					cpu_phase += 1;
+					cmd_ptr += 1;
+				end
+
+				// flow control - skip next phase;
+				
 				16'hBBBB: begin
-					// skip next phase and cmd_ptr increment
 					cmd_ptr = argument;
 					cpu_phase += 1;
 				end
 				16'hB061: begin // jump if LEFT > RIGHT
 					if(reg_left > reg_right) begin
-						cmd_ptr = argument
+						cmd_ptr = argument;
 					end
 					else begin
 						cmd_ptr += 2;
@@ -107,7 +220,7 @@ module command_processor(
 				end
 				16'hB051: begin // jump if LEFT < RIGHT
 					if(reg_left < reg_right) begin
-						cmd_ptr = argument
+						cmd_ptr = argument;
 					end
 					else begin
 						cmd_ptr += 2;
@@ -116,7 +229,7 @@ module command_processor(
 				end
 				16'hB0E1: begin // jump if LEFT == RIGHT
 					if(reg_left == reg_right) begin
-						cmd_ptr = argument
+						cmd_ptr = argument;
 					end
 					else begin
 						cmd_ptr += 2;
@@ -138,6 +251,20 @@ module command_processor(
 				end
 				16'h2001: begin // move from given address to RIGHT
 					reg_right   = mem_read;
+				end
+				16'h2A10: begin // mode *RIGHT to LEFT
+					reg_left    = mem_read;
+					cmd_ptr -= 1;
+				end
+				16'h2A01: begin // move *LEFT to RIGHT
+					reg_right   = mem_read;
+					cmd_ptr -= 1;
+				end
+				16'hFA10: begin // move RIGHT to *LEFT
+					cmd_ptr -= 1;
+				end
+				16'hFA01: begin // move LEFT to *RIGHT
+					cmd_ptr -= 1;
 				end
 				16'hADD0: begin // add from given address to LEFT
 					reg_left   += mem_read;
@@ -165,7 +292,13 @@ module command_processor(
 	// displays requested cell
 	always @(negedge mem_response) begin
 		mem_block = 0;
-	end		
+	end	
+
+	// peripheral unblocker
+	always @(negedge periph_response) begin
+		periph_block = 0;
+	end
+		
 endmodule
 
 /*
@@ -186,15 +319,15 @@ F001 - move from RIGHT to given addr
 C021 - copy value from LEFT to RIGHT
 C120 - copy value from RIGHT to LEFT
 
-E300 - swap registers
+EC6E - exchange registers
 
  * pointers - 1 memory op per cycle
 
-FA10 - move *RIGHT to LEFT
-FA01 - move *LEFT to RIGHT
+FA10 - move RIGHT to *LEFT
+FA01 - move LEFT to *RIGHT
 
-2A10 - move LEFT to *RIGHT
-2A01 - move RIGHT to *LEFT
+2A01 - move *LEFT to RIGHT
+2A10 - move *RIGHT to LEFT
 
  * all constants are presumed to be stored in memory
  * commands that add const to register or load const into it
@@ -208,8 +341,8 @@ ADD1 - add value from given addr to RIGHT
 AA10 - add *RIGHT to LEFT
 AA01 - addd *LEFT to RIGHT
 
-1A00 - add LEFT and RIGHT, save to LEFT
-1A01 - add LEFT and RIGHT, save to LEFT
+0A10 - add LEFT and RIGHT, save to LEFT
+0A11 - add LEFT and RIGHT, save to LEFT
 
  * subtraction
  
@@ -222,10 +355,9 @@ AA01 - addd *LEFT to RIGHT
 0510 - sub RIGHT from LEFT, save to LEFT
 1500 - sub LEFT from RIGHT, save to LEFT
 
- * misc math 
- 
-11E0 - invert LEFT
-11E1 - invert RIGHT
+ * binary
+
+
 
  * flow control
 
@@ -243,12 +375,12 @@ B0E1 - jump if LEFT == RIGHT
 5671 - pop to RIGHT
 567E - pop to nowhere
 
-CA11 - call function (lowest implementation priority)
-E7FC - exit function ("ret")
+CF00 - call function (lowest implementation priority)
+EF00 - exit function ("ret")
 
-C575 - call system (probably going to be button input or indicators)
-	* write something to indicators
-	* await button input
+C500 - call system (probably going to be button input or indicators)
+	  * write something to indicators
+      * button input
 
 FFFF - end program
 

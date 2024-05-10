@@ -1,0 +1,19 @@
+0010 // total length
+
+    BBBB // skip data section and jump to
+    0005
+0000 // zero            0002
+0001 // one             0003
+0064 // countdown to    0004
+
+2000 // initialize LEFT with 0
+0002 
+2001 // initialize RIGHT with 100 (0x64)
+0004
+    ADD0 :loop 0009 // add 1 to LEFT
+    0003
+    B0E1 // if equals to RIGHT, go to end
+    000F $end
+    BBBB // run loop once again
+    0009 $loop
+FFFF :end   000F

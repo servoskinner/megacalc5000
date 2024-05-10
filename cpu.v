@@ -68,12 +68,18 @@ module command_processor(
 				16'hEC6E,
 				16'hC021,
 				16'hC120,
+				
 				16'h0A10,
 				16'h0A11,
 				16'h0510,
 				16'h0511,
 				16'h1500,
 				16'h1501,
+				
+				16'h5AD0,
+				16'h5AD1,
+				16'h5670,
+				16'h5671,
 				16'hFFFF: begin
 					// do nothing
 				end
@@ -106,6 +112,7 @@ module command_processor(
 				end
 				16'h2000,
 				16'h2001,
+				
 				16'hADD0,
 				16'hADD1,
 				16'h5B70,
@@ -172,7 +179,36 @@ module command_processor(
 					cpu_phase += 1;
 					cmd_ptr += 1;
 				end
+				16'h5AD0: begin
+					mem_locator = stk_ptr;
+					mem_write = reg_left;
+					stk_ptr -= 1;
+					//
+					mem_mode = `MMODE_WRITE;
+					mem_block = 1;
+				end
+				16'h5AD1: begin
+					mem_locator = stk_ptr;
+					mem_write = reg_right;
+					stk_ptr -= 1;
+					//
+					mem_mode = `MMODE_WRITE;
+					mem_block = 1;
+				end
+				16'h5670: begin
+					mem_mode = `MMODE_READ;
+					stk_ptr += 1;
+					mem_locator = stk_ptr;
 
+					mem_block = 1;
+				end
+				16'h5671: begin
+					mem_mode = `MMODE_READ;
+					stk_ptr += 1;
+					mem_locator = stk_ptr;
+
+					mem_block = 1;
+				end
 				// flow control - skip next phase;
 				
 				16'hBBBB: begin
@@ -234,6 +270,21 @@ module command_processor(
 				16'h5B71: begin // subtract value at given address from RIGHT
 					reg_right  -= mem_read;
 				end
+				16'h5AD0: begin
+					cmd_ptr -= 1;
+				end
+				16'h5AD1: begin
+					cmd_ptr -= 1;
+				end
+				16'h5670: begin
+					reg_left = mem_read;
+					cmd_ptr -= 1;
+				end
+				16'h5671: begin
+					reg_right = mem_read;
+					cmd_ptr -= 1;
+				end
+					
 				endcase
 				// proceed to next command
 				cmd_ptr += 2;

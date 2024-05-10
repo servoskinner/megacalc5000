@@ -29,11 +29,11 @@ module rom_loader(
 		//   0007
 		//
 		// 0 2000
-		// 1 0000
+		// 1 0006
 		// 2 ADD0
 		// 3 0000
 		// 4 BBBB
-		// 5 0003
+		// 5 0002
 		// 6 0001
 		//
 		// this program loads 1 into LEFT and 

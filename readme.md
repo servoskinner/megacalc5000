@@ -88,5 +88,22 @@ _TBA_
 - ```EF00``` - exit function ("ret")
 
 - ```C500``` - call peripheral (probably going to be button input or indicators)
-	-- write something to indicators
-    -- button input
+	- write something to indicators
+    - button input
+
+## Memory Interface
+
+The command processor is decoupled from memory so they can still run at different
+clock speeds. There is a semaphore consisting of two registers (RESPONSE inside memory and
+REQUEST inside the requesting device) that regulates memory requests.
+
+The CPU and other devices react to positive clock edge while memory reacts to negative
+clock edge. The process of accessing memory takes two clock periods:
+
+* CLK POSEDGE 1: DEVICE sets ```REQUEST``` to ```1```; it no longer responds to ```clk``` in this state.
+* CLK NEGEDGE 1: MEMORY sees that ```REQUEST``` is ```1``` while ```RESPONSE``` is ```0```; it sets
+```RESPONSE``` to ```1``` and begins to process the operation according to bus values and mode flag.
+an internal semaphore prevents it from processing multiple requests at once.
+* CLK POSEDGE 2..N: DEVICE still has ```REQUEST``` set to ```1``` and does not do anything.
+* CLK NEGEDGE 2..N: MEMORY displays or finishes writing values and sets  ```RESPONSE``` to ```0```.
+* RESPONSE NEGEDGE: DEVICE sets ```REQUEST``` back to ```0``` and continues operating at next CLK POSEDGE.

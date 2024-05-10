@@ -1,0 +1,64 @@
+0033 // total length
+
+	BBBB // jump to program start
+	0016 $start 
+	
+0001 // Start data section
+0008 length        0003
+0006 origin_start  0004
+000E target_start  0005
+
+0001 // vector
+0004
+0009
+0016
+0025
+0036
+0049
+0064 // vector end
+
+0000 // space to copy to
+0000
+0000
+0000
+0000
+0000
+0000
+0000 // space end
+2000 start 0016
+0005 
+
+	2001 loop
+	0005
+	ADD1 // set RIGHT to target_start+length, compare with LEFT
+	0003
+		B0E1 // if equal, exit to program end
+		0032 $end
+	F000 // set up pointers:
+	0029 $copy_to
+	
+	5B70 
+	0005 // subtract target_start, add origin_start
+	ADD0 // (keep bias, change base)
+	0004
+	
+	F000 $copy_from
+	0027
+	
+	2001 // move value
+	FFFF copy_from	0027
+	F001 
+	FFFF copy_to	0029
+	
+	5B70 // change base back to target_start
+	0004
+	ADD0
+	0005
+	
+	ADD0 // increment pointer
+	0002
+	
+	BBBB // jump 
+	0018 $loop
+	
+FFFF end 0032

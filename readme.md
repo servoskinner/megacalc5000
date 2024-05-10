@@ -26,12 +26,67 @@ so it is neither read as argument nor skipped.
 ## Instruction set
 
 ### Loading/Storing
+  
+- ```F000``` - move from LEFT to given addr
+- ```F001``` - move from RIGHT to given addr
 
-- ```F000```: store ```LEFT``` to ```*ARG```
-- ```F001```: store ```RIGHT``` to ```*ARG```
+- ```2000``` - move from given addr to LEFT
+- ```2001``` - move from given addr to RIGHT
 
-- ```2000```: load ```*ARG``` to ```LEFT```
-- ```2001```: load ```*ARG``` to ```RIGHT```
+- ```C021``` - copy value from LEFT to RIGHT
+- ```C120``` - copy value from RIGHT to LEFT
 
-*TBA*
+ To use pointers, modify the arg word
+ corresponding to the command
 
+- ```EC6E``` - exchange registers
+
+ all constants are presumed to be stored in memory
+ commands that add const to register or load const into it
+ are omitted because they are redundant.
+
+### Arithmetics
+ 
+- ```ADD0``` - add value from given addr to LEFT
+- ```ADD1``` - add value from given addr to RIGHT
+
+- ```0A10``` - add LEFT and RIGHT, save to LEFT
+- ```0A11``` - add LEFT and RIGHT, save to LEFT
+ 
+- ```5B70``` - sub value from given addr from LEFT
+- ```5B71``` - sub value from given addr from RIGHT
+
+- ```5A10``` - sub *RIGHT from LEFT
+- ```5A01``` - sub *LEFT from RIGHT
+
+- ```0510``` - sub RIGHT from LEFT, save to LEFT
+- ```1500``` - sub LEFT from RIGHT, save to LEFT
+
+### Binary
+
+_TBA_
+
+### Flow Control
+
+- ```FFFF``` - shutdown
+- ```BBBB``` - unconditional jump
+
+- ```B061``` - jump if LEFT > RIGHT
+- ```B051``` - jump if LEFT < RIGHT
+- ```B0E1``` - jump if LEFT == RIGHT
+
+### Stack and functions (TBA)
+
+- ```5AD0``` - push LEFT
+- ```5AD1``` - push RIGHT
+
+- ```5670``` - pop to LEFT
+- ```5671``` - pop to RIGHT
+- ```567E``` - pop to nowhere
+
+- ```CF00``` - call function (lowest implementation priority)
+- ```EF00``` - exit function ("ret")
+
+- ```C500``` - call peripheral (probably going to be button input or indicators)
+	-- write something to indicators
+    -- button input

@@ -64,10 +64,6 @@ module command_processor(
 				command = mem_read;
 
 				case(command) // skip arg request if it's irrelevant (inter-register ops)
-				16'hFA10,
-				16'hFA01,
-				16'h2A10,
-				16'h2A01,
 				
 				16'hEC6E,
 				16'hC021,
@@ -108,22 +104,6 @@ module command_processor(
 					mem_mode = `MMODE_WRITE;
 					mem_block = 1;
 				end
-				16'hFA10: begin
-					mem_locator = reg_left;
-					mem_write = reg_right;
-					// /!\ set write mode AFTER setting
-					//	   locator and value!
-					mem_mode = `MMODE_WRITE;
-					mem_block = 1;
-				end
-				16'hFA01: begin
-					mem_locator = reg_right;
-					mem_write = reg_left;
-					// /!\ set write mode AFTER setting
-					//	   locator and value!
-					mem_mode = `MMODE_WRITE;
-					mem_block = 1;
-				end
 				16'h2000,
 				16'h2001,
 				16'hADD0,
@@ -132,16 +112,6 @@ module command_processor(
 				16'h5B71: begin // move from given address to LEFT
 					mem_mode = `MMODE_READ;
 					mem_locator = argument;
-					mem_block = 1;
-				end
-				16'h2A01: begin
-					mem_mode = `MMODE_READ;
-					mem_locator = reg_left;
-					mem_block = 1;
-				end
-				16'h2A10: begin
-					mem_mode = `MMODE_READ;
-					mem_locator = reg_right;
 					mem_block = 1;
 				end	
 
@@ -252,20 +222,6 @@ module command_processor(
 				16'h2001: begin // move from given address to RIGHT
 					reg_right   = mem_read;
 				end
-				16'h2A10: begin // mode *RIGHT to LEFT
-					reg_left    = mem_read;
-					cmd_ptr -= 1;
-				end
-				16'h2A01: begin // move *LEFT to RIGHT
-					reg_right   = mem_read;
-					cmd_ptr -= 1;
-				end
-				16'hFA10: begin // move RIGHT to *LEFT
-					cmd_ptr -= 1;
-				end
-				16'hFA01: begin // move LEFT to *RIGHT
-					cmd_ptr -= 1;
-				end
 				16'hADD0: begin // add from given address to LEFT
 					reg_left   += mem_read;
 				end
@@ -319,15 +275,10 @@ F001 - move from RIGHT to given addr
 C021 - copy value from LEFT to RIGHT
 C120 - copy value from RIGHT to LEFT
 
+ * To use pointers, modify the arg word
+ * corresponding to the command
+
 EC6E - exchange registers
-
- * pointers - 1 memory op per cycle
-
-FA10 - move RIGHT to *LEFT
-FA01 - move LEFT to *RIGHT
-
-2A01 - move *LEFT to RIGHT
-2A10 - move *RIGHT to LEFT
 
  * all constants are presumed to be stored in memory
  * commands that add const to register or load const into it
@@ -337,9 +288,6 @@ FA01 - move LEFT to *RIGHT
  
 ADD0 - add value from given addr to LEFT
 ADD1 - add value from given addr to RIGHT
-
-AA10 - add *RIGHT to LEFT
-AA01 - addd *LEFT to RIGHT
 
 0A10 - add LEFT and RIGHT, save to LEFT
 0A11 - add LEFT and RIGHT, save to LEFT
@@ -357,7 +305,7 @@ AA01 - addd *LEFT to RIGHT
 
  * binary
 
-
+TBA
 
  * flow control
 

@@ -1,0 +1,48 @@
+002F
+BBBB 0
+0016
+0001 // data section 0002
+0008 // length		 0003
+0006 // origin addr  0004
+000C // target addr  0005
+0001
+0004
+0009
+0016
+0025
+0036
+0049
+0064
+0000
+0000
+0000 10
+0000
+0000
+0000
+0000
+0000 // end data section
+2000 // setup: left is ptr, right is target end
+0005 
+2001 // loop	 0018
+0005
+ADD1
+0003
+B0E1
+002E
+F000
+0029 // $copyto
+5B70 20
+0005 // sub target addr
+ADD0
+0004 // add origin addr
+F000
+0027 // $copyfrom
+2001
+FFFF // copyfrom 0027
+F001 
+FFFF // copyto   0029
+ADD0
+0002 // increment
+BBBB
+0018 // $loop
+FFFF // $endprog 002E

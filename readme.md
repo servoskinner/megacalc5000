@@ -91,6 +91,11 @@ _TBA_
 	- write something to indicators
     - button input
 
+### Mystery Commands
+
+- ```FEED``` - ??
+- ```5EED``` - ??????????????
+
 ## Memory Interface
 
 The command processor is decoupled from memory so they can still run at different

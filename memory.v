@@ -6,30 +6,24 @@
 module memory(
 	input clk,
 	
-	input request_flag,
+	input request,
 	input mode_flag,
 	input [15:0] locator,
 	input [15:0] write_bus,
 
-	output reg [15:0] read_bus,
-	output reg response_flag
+	output reg [15:0] read_bus = 0,
+	output reg response = 0
 );
 	reg [15:0]memory[`SIZE-1:0];
-	reg reset; // prevents multiple requests from stacking into one
-
-	initial begin
-		response_flag = 0;
-		read_bus      = 0;
-		reset         = 0;
-	end
+	reg reset = 0; // make response generate both negative and positive edge on each request
 
 	always @(negedge clk) begin
-		if(reset) begin
-					reset = 0;
-					response_flag = 0;
+		if (reset) begin
+			reset <= 0;
+			response <= 0;
 		end
-		else if(request_flag & ~response_flag) begin
-			response_flag = 1;
+		else if (request & ~response) begin
+			response = 1;
 			case(mode_flag)
 			`MMODE_READ: read_bus = memory[locator];
 			`MMODE_WRITE: memory[locator] = write_bus;

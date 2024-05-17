@@ -34,7 +34,7 @@ module rom_reader(
 			memory_request = 0;
 			progress = progress+1;
 			
-			if(progress == `SIZE-1) begin
+			if(progress == 0) begin
 				done = 1;
 				progress = 0;
 			end	

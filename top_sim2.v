@@ -1,16 +1,7 @@
 `timescale 1 ns / 100 ps
 
-module group(
-	input clk,
-	input button,
-	input [7:0]switch_bus,
-
-	output wire [7:0]switch,
-	output wire [6:0]segments,
-	output wire [7:0]digits,
-	output wire [7:0]led
-);
-	assign led = switch;
+module group();
+	reg clk = 1'b0;
 
 	wire request_wire;
 	wire request_loader;
@@ -64,7 +55,52 @@ module group(
 	wire [15:0]io_command;
 	wire [15:0]io_word;
 	wire [15:0]io_keycode;
-	// memory 
+
+	wire button;
+	wire switch[7:0];
+	wire segments[6:0];
+	wire digits[7:0];
+	wire led[7:0];
+
+	wire [7:0]switch_bus = {switch[0],
+							switch[1],
+							switch[2],
+							switch[3],
+							switch[4],
+							switch[5],
+							switch[6],
+							switch[7]
+							};
+	wire [6:0]segment_bus = {segments[0],
+							 segments[1],
+							 segments[2],
+							 segments[3],
+							 segments[4],
+							 segments[5],
+							 segments[6]
+							 };
+	wire [7:0]digit_bus  = {digits[0],
+							digits[1],
+							digits[2],
+							digits[3],
+							digits[4],
+							digits[5],
+							digits[6],
+							digits[7]
+						   };
+						   
+	reg [7:0]dummy = 8'hED;
+	assign switch_bus = dummy;
+
+	always begin
+		#1 clk = ~clk;
+	end
+
+	initial begin
+		$dumpvars;
+		#1000000 $finish;
+	end
+	
 	memory            mem(.clk(clk),
 			              .request(request_wire),
 			              .mode_flag(mode_wire),
@@ -72,7 +108,7 @@ module group(
 			              .write_bus(write_bus),
 			              .read_bus(read_bus),
 			              .response(response_wire));
-	// 
+
 	static_loader     loader(.clk(clk),
 					      .memory_request(request_loader),
 					      .memory_response(response_wire),
@@ -80,7 +116,7 @@ module group(
 					      .locator_bus(locator_loader),
 					      .memory_mode(mode_loader),
 					      .done(loader_done));
-	// CPU
+
 	command_processor cpu(.clk(cpu_clock),
 						  .mem_response(response_wire),
 						  .mem_read(read_bus),
@@ -95,17 +131,23 @@ module group(
 						  .periph_argument(io_word),
 						  .periph_read(io_keycode),
 						  .done(cpu_done));
-	// led & switch control
+
 	peripheral_io  periph(.clk(cpu_clock),
 
-						  .switch(switch),
+						  .switch(switch_bus),
 						  .button(button),
-						  .segments(segments),
-						  .digits(digits),
+						  .segments(segment_bus),
+						  .digits(digit_bus),
 							
 						  .request(io_request),
 						  .response(io_response),
 						  .cmd(io_command),
 						  .word(io_word),
 						  .keycode(io_keycode));
+
+	rom_reader     reader(.clk(reader_clock),
+				          .memory_response(response_wire),
+				          .locator_bus(locator_reader),
+				          .memory_request(request_reader),
+				          .memory_mode(mode_reader));
 endmodule

@@ -15,9 +15,12 @@ module command_processor(
 	input periph_response,
 
 	input [15:0]mem_read, // values from memory are received here
+	input [15:0]periph_read,
 
 	output reg [15:0]mem_locator = 0, // this is used to access memory cells.
 	output reg [15:0]mem_write = 0,   // this value is written by 
+	output reg [15:0]periph_command = 0,
+	output reg [15:0]periph_argument = 0,
 
 	output reg mem_mode  =  0,		  // 1: write, 0: read
 	output reg mem_block = 0,		  // do nothing - await response from memory
@@ -80,7 +83,16 @@ module command_processor(
 				16'h5AD1,
 				16'h5670,
 				16'h5671,
-				16'hFFFF: begin
+				16'hFFFF,
+
+				16'hAAA0,
+				16'hAAA1,
+				16'h1110,
+				16'h1111,
+				16'hCCC0,
+				16'hCCC1,
+
+				16'hC500: begin
 					// do nothing
 				end
 				default: begin
@@ -209,6 +221,45 @@ module command_processor(
 
 					mem_block = 1;
 				end
+				
+				// binary logic
+				
+				16'hAAA0: begin	// place LEFT & RIGHT to LEFT
+					reg_left = reg_left & reg_right;
+				
+					cpu_phase += 1;
+					cmd_ptr += 1;
+				end
+				16'hAAA1: begin	// place LEFT & RIGHT to RIGHT
+					reg_right = reg_left & reg_right;
+								
+					cpu_phase += 1;
+					cmd_ptr += 1;
+					end
+				16'hCCC0: begin // place LEFT | RIGHT to LEFT
+					reg_left = reg_left | reg_right;
+
+					cpu_phase += 1;
+					cmd_ptr += 1;
+				end
+				16'hCCC1: begin // place LEFT | RIGHT to RIGHT
+					reg_right = reg_left | reg_right;
+
+					cpu_phase += 1;
+					cmd_ptr += 1;
+				end
+				16'h1110: begin	// invert LEFT
+					reg_left = ~reg_left;
+								
+					cpu_phase += 1;
+					cmd_ptr += 1;
+				end
+				16'h1111: begin	// invert RIGHT
+					reg_right = ~reg_right;
+												
+					cpu_phase += 1;
+					cmd_ptr += 1;
+				end
 				// flow control - skip next phase;
 				
 				16'hBBBB: begin
@@ -248,6 +299,14 @@ module command_processor(
 					mem_locator = 0;
 					mem_mode = 0;
 				end
+
+				// peripheral call
+
+				16'hC500: begin // call peripheral (read values are written to RIGHT)
+					periph_command = reg_left;
+					periph_argument = reg_right;
+					periph_block = 1;
+				end
 				endcase
 			end
 			`PHASE_EXEC2:  begin
@@ -284,6 +343,10 @@ module command_processor(
 					reg_right = mem_read;
 					cmd_ptr -= 1;
 				end
+				16'hC500: begin
+					reg_right = periph_read;
+					cmd_ptr -= 1;
+				end
 					
 				endcase
 				// proceed to next command
@@ -295,8 +358,7 @@ module command_processor(
 		end
 	end	
 
-	// memory unblocker - continue exec when memory
-	// displays requested cell
+	// memory unblocker
 	always @(negedge mem_response) begin
 		mem_block = 0;
 	end	

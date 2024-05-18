@@ -1,5 +1,7 @@
 import sys
 
+import sys
+
 def get_symbol_array(filename: str):
     with open(filename, "r") as file:
         program = '\0' + file.read()
@@ -28,11 +30,10 @@ def get_symbol_array(filename: str):
     program = program[1:].split() # remove \0 from start and split
 
     keywords = ["left", "right", "load", "store", "copy", "exch",
-                "add", "sub", "and", "or", "neg", "halt", "jump",
+                "add", "sub", "and", "or", "not", "halt", "jump",
                 "jumplg", "jumprg", "jumpeq", "push", "pop", "call",
                 "ret", "feed", "seed"]   
 
-    tag_references = {}
     tag_declarations = {}
 
     machine_code = []
@@ -42,10 +43,9 @@ def get_symbol_array(filename: str):
         word = program[offset]
 
         if word not in keywords and word[0] != "$" and word[-1] != ":": # parse tag references
-            pass
+            machine_code.append("%" + word)
         
         if word[0] == "$": # parse literals: convert to hex, crop "0x" at beginning
-            machine_word = ""
             if word[1] == "b":
                 machine_code.append(hex(int(word[2:], 2))[2:].zfill(4).upper())
             elif word[1] == "h":
@@ -62,16 +62,148 @@ def get_symbol_array(filename: str):
             tag_declarations[tag] = len(machine_code)
 
         # parse instructions
-        ...
+        if word in keywords:
+            if word == "halt":
+                machine_code.append("FFFF")
+
+            if word == "jump"
+                machine_code.append("BBBB")
+
+            if word == "jumplg"
+                machine_code.append("B061")
+
+            if word == "jumprg"
+                machine_code.append("B051")
+
+            if word == "jumpeq"
+                machine_code.append("B0E1")
+
+            if word == "call"
+                machine_code.append("CA11")
+
+            if word == "ret"
+                machine_code.append("EEFF")
+                            
+            if word == "load":
+                if program[offset+1] == "left":
+                    machine_code.append("2000")
+                elif program[offset+1] == "right":
+                    machine_code.append("2001")
+                else:
+                    raise RuntimeError("Malformed statement: " + word + " " + program[offset+1])
+                offset += 1
+
+            if word == "store":
+                if program[offset+1] == "left":
+                    machine_code.append("F000")
+                elif program[offset+1] == "right":
+                    machine_code.append("F001")
+                else:
+                    raise RuntimeError("Malformed statement: " + word + " " + program[offset+1]) 
+                offset += 1   
+
+            if word == "copy":
+                if program[offset+1] == "left" and program[offset+2] == "right":
+                    machine_code.append("C120")
+                elif program[offset+1] == "right" and program[offset+2] == "left":
+                    machine_code.append("C021")
+                else:
+                    raise RuntimeError("Malformed statement: " + word + " " + program[offset+1] + " " + program[offset+2])
+                offset += 2 
+                       
+            if word == "add":
+            
+                if program[offset+1] == "left":
+                    if program[offset+2] == "right":
+                        machine_code.append("AD10")
+                        offset += 2
+                    if program[offset+2] == "left":
+                        raise RuntimeError("Malformed statement: " + word + " " + program[offset+1] + " " + program[offset+2])
+                    else:
+                        machine_code.append("ADD0")
+                        offset += 1
+                        
+                elif program[offset+1] == "right":
+                    if program[offset+2] == "left":
+                        machine_code.append("AD01")
+                        offset += 2
+                    if program[offset+2] == "right":
+                        raise RuntimeError("Malformed statement: " + word + " " + program[offset+1] + " " + program[offset+2])
+                    else:
+                        machine_code.append("ADD1")
+                        offset += 1
+                        
+                else:
+                    raise RuntimeError("Malformed statement: " + word + " " + program[offset+1])
+
+            if word == "sub":
+            
+                if program[offset+1] == "left":
+                    if program[offset+2] == "right":
+                        machine_code.append("5B10")
+                        offset += 2
+                    if program[offset+2] == "left":
+                        raise RuntimeError("Malformed statement: " + word + " " + program[offset+1] + " " + program[offset+2])
+                    else:
+                        machine_code.append("5B70")
+                        offset += 1
+                        
+                elif program[offset+1] == "right":
+                    if program[offset+2] == "left":
+                        machine_code.append("5B01")
+                        offset += 2
+                    if program[offset+2] == "right":
+                        raise RuntimeError("Malformed statement: " + word + " " + program[offset+1] + " " + program[offset+2])
+                    else:
+                        machine_code.append("5B71")
+                        offset += 1
+                        
+                else:
+                    raise RuntimeError("Malformed statement: " + word + " " + program[offset+1])
+
+            if word == "and":
+                if program[offset+1] == "left" and program[offset+2] == "right":
+                    machine_code.append("AAA0")
+                elif program[offset+1] == "right" and program[offset+2] == "left":
+                    machine_code.append("AAA1")
+                else:
+                    raise RuntimeError("Malformed statement: " + word + " " + program[offset+1] + " " + program[offset+2])
+                offset += 2
+
+            if word == "or":
+                if program[offset+1] == "left" and program[offset+2] == "right":
+                    machine_code.append("CCC0")
+                elif program[offset+1] == "right" and program[offset+2] == "left":
+                    machine_code.append("CCC1")
+                else:
+                    raise RuntimeError("Malformed statement: " + word + " " + program[offset+1] + " " + program[offset+2])
+                offset += 2
+
+            if word == "not":
+                if program[offset+1] == "left":
+                    machine_code.append("1110")
+                elif program[offset+1] == "right":
+                    machine_code.append("1111")
+                else:
+                    raise RuntimeError("Malformed statement: " + word + " " + program[offset+1])
+                offset += 1
     
         # Error cases
         if word[0] == "$" and word[-1] == ":":
             raise RuntimeError("FATAL: ambiguous statement: " + word)
 
         offset += 1
-    return machine_code
+
+    output = "" # resolve tags
+    for word in machine_code:
+        if word[0] == "%":
+            output += hex(tag_declarations[word[1:]])[2:].zfill(4).upper()
+        else:
+            output += word
+
+        output += "\n"
+    
+    return output
 
 if __name__ == "__main__":
     print(get_symbol_array("code.txt"))
-
-    

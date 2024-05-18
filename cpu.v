@@ -72,12 +72,10 @@ module command_processor(
 				16'hC021,
 				16'hC120,
 				
-				16'h0A10,
-				16'h0A11,
-				16'h0510,
-				16'h0511,
-				16'h1500,
-				16'h1501,
+				16'hAD10,
+				16'hAD01,
+				16'h5B10,
+				16'h6B01,
 				
 				16'h5AD0,
 				16'h5AD1,
@@ -91,6 +89,7 @@ module command_processor(
 				16'h1111,
 				16'hCCC0,
 				16'hCCC1,
+				16'hEEFF,
 
 				16'hC500: begin
 					// do nothing
@@ -155,72 +154,90 @@ module command_processor(
 					cpu_phase += 1;
 					cmd_ptr += 1;
 				end
-				16'h0A10: begin // add LEFT and RIGHT, store to LEFT
+				16'hAD10: begin // add LEFT and RIGHT, store to LEFT
 					reg_left += reg_right;
 					
 					cpu_phase += 1;
 					cmd_ptr += 1;
 				end
-				16'h0A11: begin // add LEFT and RIGHT, store to RIGHT
+				16'hAD01: begin // add LEFT and RIGHT, store to RIGHT
 					reg_right += reg_left;
 					
 					cpu_phase += 1;
 					cmd_ptr += 1;
 				end
-				16'h0510: begin	// subtract RIGHT from LEFT, save to LEFT
+				16'h5B10: begin	// subtract RIGHT from LEFT, save to LEFT
 					reg_left -= reg_right;
 				
 					cpu_phase += 1;
 					cmd_ptr += 1;
 				end
-				16'h0511: begin	// subtract RIGHT from LEFT, save to RIGHT
-					reg_right = reg_left - reg_right;
-
-					cpu_phase += 1;
-					cmd_ptr += 1;
-				end
-				16'h1500: begin	// subtract LEFT from RIGHT, save to LEFT
-					reg_left = reg_right - reg_left;
-
-					cpu_phase += 1;
-					cmd_ptr += 1;
-				end
-				16'h1501: begin // subtract LEFT from RIGHT, save to RIGHT			
+				16'h5B01: begin // subtract LEFT from RIGHT, save to RIGHT			
 					reg_right -= reg_left;
 
 					cpu_phase += 1;
 					cmd_ptr += 1;
 				end
-				16'h5AD0: begin
+				16'h5AD0: begin // push LEFT
 					mem_locator = stk_ptr;
 					mem_write = reg_left;
 					stk_ptr -= 1;
 					//
+					cpu_phase += 1;
+					cmd_ptr += 1;
+					
 					mem_mode = `MMODE_WRITE;
 					mem_block = 1;
 				end
-				16'h5AD1: begin
+				16'h5AD1: begin // push RIGHT
 					mem_locator = stk_ptr;
 					mem_write = reg_right;
 					stk_ptr -= 1;
 					//
+					cpu_phase += 1;
+					cmd_ptr += 1;
+					
 					mem_mode = `MMODE_WRITE;
 					mem_block = 1;
 				end
-				16'h5670: begin
+				16'hCA11: begin // call function (push RIP)
+					mem_locator = stk_ptr;
+					mem_write = cmd_ptr;
+					stk_ptr -= 1;
+					//
+					cpu_phase += 1;
+					cmd_ptr += 2; // account for argument
+					
+					mem_mode = `MMODE_WRITE;
+					mem_block = 1;
+				end	
+				16'h5670: begin // pop to LEFT
 					mem_mode = `MMODE_READ;
 					stk_ptr += 1;
 					mem_locator = stk_ptr;
 
 					mem_block = 1;
 				end
-				16'h5671: begin
+				16'h5671: begin // pop to RIGHT
 					mem_mode = `MMODE_READ;
 					stk_ptr += 1;
 					mem_locator = stk_ptr;
 
 					mem_block = 1;
 				end
+				16'h5671: begin // pop to nowhere
+					stk_ptr += 1;
+
+					cpu_phase += 1;
+					cmd_ptr += 1;
+				end
+				16'hEEFF: begin // exit function
+					mem_mode = `MMODE_READ;
+					stk_ptr += 1;
+					mem_locator = stk_ptr;
+
+					mem_block = 1;
+				en
 				
 				// binary logic
 				
@@ -260,9 +277,10 @@ module command_processor(
 					cpu_phase += 1;
 					cmd_ptr += 1;
 				end
+				
 				// flow control - skip next phase;
 				
-				16'hBBBB: begin
+				16'hBBBB: begin // unconditional jump
 					cmd_ptr = argument;
 					cpu_phase += 1;
 				end
@@ -329,21 +347,19 @@ module command_processor(
 				16'h5B71: begin // subtract value at given address from RIGHT
 					reg_right  -= mem_read;
 				end
-				16'h5AD0: begin
-					cmd_ptr -= 1;
-				end
-				16'h5AD1: begin
-					cmd_ptr -= 1;
-				end
-				16'h5670: begin
+				16'h5670: begin // pop to LEFT
 					reg_left = mem_read;
 					cmd_ptr -= 1;
 				end
-				16'h5671: begin
+				16'h5671: begin // pop to RIGHT
 					reg_right = mem_read;
 					cmd_ptr -= 1;
 				end
-				16'hC500: begin
+				16'h5671: begin // pop to RIGHT
+					reg_right = mem_read;
+					cmd_ptr -= 1;
+				end
+				16'hC500: begin // call peripheral IO
 					reg_right = periph_read;
 					cmd_ptr -= 1;
 				end

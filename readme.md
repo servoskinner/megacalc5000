@@ -50,21 +50,25 @@ so it is neither read as argument nor skipped.
 - ```ADD0``` - add value from given addr to LEFT
 - ```ADD1``` - add value from given addr to RIGHT
 
-- ```0A10``` - add LEFT and RIGHT, save to LEFT
-- ```0A11``` - add LEFT and RIGHT, save to LEFT
+- ```AD10``` - add LEFT and RIGHT, save to LEFT
+- ```AD01``` - add LEFT and RIGHT, save to RIGHT
  
 - ```5B70``` - sub value from given addr from LEFT
 - ```5B71``` - sub value from given addr from RIGHT
 
-- ```5A10``` - sub *RIGHT from LEFT
-- ```5A01``` - sub *LEFT from RIGHT
-
-- ```0510``` - sub RIGHT from LEFT, save to LEFT
-- ```1500``` - sub LEFT from RIGHT, save to LEFT
+- ```5A10``` - sub RIGHT from LEFT, save to LEFT
+- ```5A01``` - sub LEFT from RIGHT, save to RIGHT
 
 ### Binary
 
-_TBA_
+- ```AAA0``` - place LEFT AND RIGHT to LEFT
+- ```AAA1``` - place LEFT AND RIGHT to RIGTH
+
+- ```CCC0``` - place LEFT OR RIGHT to LEFT
+- ```CCC1``` - place LEFT OR RIGHT to RIGHT
+
+- ```1110``` - bitwise invert LEFT
+- ```1111``` - bitwise invert RIGHT
 
 ### Flow Control
 
@@ -84,8 +88,8 @@ _TBA_
 - ```5671``` - pop to RIGHT
 - ```567E``` - pop to nowhere
 
-- ```CF00``` - call function (lowest implementation priority)
-- ```EF00``` - exit function ("ret")
+- ```CA11``` - call function (push RIP, then set to arg)
+- ```EEFF``` - exit function (pop to RIP)
 
 - ```C500``` - call peripheral (probably going to be button input or indicators)
 	- write something to indicators

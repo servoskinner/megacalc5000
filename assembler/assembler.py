@@ -1,8 +1,7 @@
 import sys
+import argparse
 
-import sys
-
-def get_symbol_array(filename: str):
+def assembly(filename: str, outname: str):
     with open(filename, "r") as file:
         program = '\0' + file.read()
 
@@ -66,23 +65,26 @@ def get_symbol_array(filename: str):
             if word == "halt":
                 machine_code.append("FFFF")
 
-            if word == "jump"
+            if word == "jump":
                 machine_code.append("BBBB")
 
-            if word == "jumplg"
+            if word == "jumplg":
                 machine_code.append("B061")
 
-            if word == "jumprg"
+            if word == "jumprg":
                 machine_code.append("B051")
 
-            if word == "jumpeq"
+            if word == "jumpeq":
                 machine_code.append("B0E1")
 
-            if word == "call"
+            if word == "call":
                 machine_code.append("CA11")
 
-            if word == "ret"
+            if word == "ret":
                 machine_code.append("EEFF")
+
+            if word == "int":
+                machine_code.append("C500")
                             
             if word == "load":
                 if program[offset+1] == "left":
@@ -100,7 +102,27 @@ def get_symbol_array(filename: str):
                     machine_code.append("F001")
                 else:
                     raise RuntimeError("Malformed statement: " + word + " " + program[offset+1]) 
-                offset += 1   
+                offset += 1 
+
+            if word == "push":
+                if program[offset+1] == "left":
+                    machine_code.append("5AD0")
+                    offset += 1
+                elif program[offset+1] == "right":
+                    machine_code.append("5AD1")
+                    offset += 1
+                else:
+                    raise RuntimeError("Malformed statement: " + word + " " + program[offset+1]) 
+    
+            if word == "pop":
+                if program[offset+1] == "left":
+                    machine_code.append("5670")
+                    offset += 1
+                elif program[offset+1] == "right":
+                    machine_code.append("5671")
+                    offset += 1
+                else:
+                    machine_code.append("567E") 
 
             if word == "copy":
                 if program[offset+1] == "left" and program[offset+2] == "right":
@@ -202,8 +224,16 @@ def get_symbol_array(filename: str):
             output += word
 
         output += "\n"
-    
-    return output
+
+    output = hex(len(machine_code))[2:].zfill(4).upper() + "\n" + output
+    with open(outname, "w") as outfile:
+        outfile.write(output)
 
 if __name__ == "__main__":
-    print(get_symbol_array("code.txt"))
+    parser = argparse.ArgumentParser(description='Convert MEGACALC-5000 assembly code to binary.')
+    parser.add_argument('source', type=str, help='The file containing assembly program')
+    parser.add_argument('-o', '--output', type=str, default="program.txt", help='The file to write binary to')
+    
+    args = parser.parse_args()
+    
+    assembly(args.source, args.output)

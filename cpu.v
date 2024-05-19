@@ -204,9 +204,9 @@ module command_processor(
 					mem_locator = stk_ptr;
 					mem_write = cmd_ptr;
 					stk_ptr -= 1;
+					cmd_ptr = argument;
 					//
 					cpu_phase += 1;
-					cmd_ptr += 2; // account for argument
 					
 					mem_mode = `MMODE_WRITE;
 					mem_block = 1;
@@ -237,7 +237,7 @@ module command_processor(
 					mem_locator = stk_ptr;
 
 					mem_block = 1;
-				en
+				end
 				
 				// binary logic
 				
@@ -362,6 +362,9 @@ module command_processor(
 				16'hC500: begin // call peripheral IO
 					reg_right = periph_read;
 					cmd_ptr -= 1;
+				end
+				16'hEEFF: begin // exit function
+					cmd_ptr = mem_read;
 				end
 					
 				endcase

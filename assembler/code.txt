@@ -1,7 +1,13 @@
-1: $1
-2: toad
-	  $101
-frog: 2
-toad: $b101010000
+// example program that counts up to 100
+jump start
 
+// data section
+1:     $1
+100:   $100
 
+start: load left 1
+	   load right 100
+loop:  add left 1
+	   jumpeq end
+	   jump loop
+end:   halt

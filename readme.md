@@ -2,28 +2,62 @@
 ## About
 this is a primitive 16 bit microprocessor model with following features:
 - two equivalent general-purpose registers: ```LEFT``` and ```RIGHT```
-- pointer logic support
-- stack and subroutine call support (TBA)
+- independent memory interface
+- stack and subroutine call support
+- half-assed pointer logic support
 
-## Programming
-Instructions and data are stored in common memory space, which is loaded
-with contents of  ```program.txt``` on startup. 
-The first hex word in .txt denotes the length of program section; 
-everything past it will be filled with 0000's. There's a total of 
+## Assembling and running programs
+You can translate assembly code to binary using ```assembler.py```. Build the simulation with ```iverilog``` by
+running ```build.sh```, move the assembled program to the same directory as the binary and make sure the filename is set to ```program.txt```.
+Then run the binary and inspect the dump file by running ```gtkwave dump.vcd```.
+
+There are two helper modules: ```rom_loader``` is the first to start when simulation begins; it copies the contents of ```program.txt``` to
+RAM and sets unused words to zero. ```ram_reader``` scans all memory cells when the CPU has finished working so they can be viewed in the dump file.
+
+Display the flags ```loader_done``` and ```cpu_done``` in GTKWave to find when each of components was working, to see how memory has changed after
+running the program and what steps did CPU take.
+
+## Assembler overview
+The assembler's first step is copying the program and removing the comments from it; When it encounters ```//```, this combination
+and any other characters until the end of the line are ignored.
+
+After this, the program is split into words; it is not substantial that only one instruction is written per line. 
+Every **non-keyword** that ends with a ```:``` is considered a **tag**: it is not represented in the final binary, but
+it associates the next word's memory location with a textual identifier that can be referenced in other parts of the program.
+It can be used to implement variables, flow control, and functions.
+
+The following program excerpt adds a number to one register and subtracts it from the other, until the the former is greater than the latter:
+```
+loop:	add left number		// overwrite LEFT register with LEFT + *number
+	sub right number	// overwrite RIGHT register with RIGHT - *number
+	jumplg end		// continue executing from "end:" if LEFT > RIGHT
+	jump loop		// continue executing from "loop:" regardless of condition
+end: // ...
+```
+
+## Mnemonics
+
+
+## Binary Instruction set
+### Overview
+The instructions and data are stored in common memory space, which is loaded
+with contents of  **program.txt** on startup. 
+The first hex word in .txt is metadata, and it denotes the length of program section that follows; 
+everything with an address greater than it will be filled with 0000's by _rom\_loader_. There's a total of 
 _65536_ 16-bit memory cells at user's disposal. 
 
-Most commands consist of two words - command identifier and argument.
-
+Most commands consist of two words - a command identifier and an argument.
 For example, ```ADD0 0064``` adds the value stored at memory address
-```0x0064``` to ```LEFT``` register. Both words are treated as a single
-command.
+```0x0064``` to register ```LEFT```, replacing it with the result. Both words are treated as parts of a single
+command and retrieved from memory sequentially. Therefore, the command pointer
+is normally advanced 2 cells forward.
 
-On the other hand, the ```FA01``` command writes the value from ```LEFT```
-to the address stored in ```RIGHT``` and is therefore treated as single-word 
-command. The exectution continues from the word that comes after it, 
-so it is neither read as argument nor skipped.
-
-## Instruction set
+Other commands, especially those that do not require accessing memory, 
+use only one word. For example, the ```1110``` overwrites all bits of ```LEFT```
+with their inverses and does not require an argument. After execution of
+a single-word command, the _instruction pointer_ is increased by 1 - the word
+that comes next is not skipped and is treated as the beginning of next command,
+so instructions are not always aligned by parity.
 
 ### Loading/Storing
   
@@ -36,8 +70,7 @@ so it is neither read as argument nor skipped.
 - ```C021``` - copy value from LEFT to RIGHT
 - ```C120``` - copy value from RIGHT to LEFT
 
- To use pointers, modify the arg word
- corresponding to the command
+ To access something using a 
 
 - ```EC6E``` - exchange registers
 
@@ -79,7 +112,7 @@ so it is neither read as argument nor skipped.
 - ```B051``` - jump if LEFT < RIGHT
 - ```B0E1``` - jump if LEFT == RIGHT
 
-### Stack and functions (TBA)
+### Stack and functions
 
 - ```5AD0``` - push LEFT
 - ```5AD1``` - push RIGHT
@@ -88,21 +121,21 @@ so it is neither read as argument nor skipped.
 - ```5671``` - pop to RIGHT
 - ```567E``` - pop to nowhere
 
-- ```CA11``` - call function (push RIP, then set to arg)
+- ```CA11``` - call function (push RIP, then set it to arg)
 - ```EEFF``` - exit function (pop to RIP)
 
-- ```C500``` - call peripheral (probably going to be button input or indicators)
+- ```C500``` - call peripheral (not implemented, this can be anything)
 	- write something to indicators
-    - button input
+    	- button input
 
-### Mystery Commands
+### Mystery Commands (DO NOT TRY)
 
-- ```FEED``` - ??
-- ```5EED``` - ??????????????
+- ```FEED```
+- ```5EED```
 
 ## Memory Interface
 
-The command processor is decoupled from memory so they can still run at different
+The command processor is decoupled from memory so they can run at different
 clock speeds. There is a semaphore consisting of two registers (RESPONSE inside memory and
 REQUEST inside the requesting device) that regulates memory requests.
 

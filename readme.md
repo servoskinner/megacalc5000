@@ -34,9 +34,34 @@ loop:	add left number		// overwrite LEFT register with LEFT + *number
 	jump loop		// continue executing from "loop:" regardless of condition
 end: // ...
 ```
+A word that starts with ```$``` and signifies a number is a **constant** that is represented verbatim in the assembled program.
+Normally, it is treated as a decimal number; use ```$h``` for hexadecimal and ```$b``` for binary numbers.
+
+**Tag names** must not begin with an ```$```, end with ```:```, contain spaces, tabs, or newlines, or match mnemonic keywords.
+Any other names, including numbers, are legal: you can use it to declare constants.
+
+Here is an implementation of modulo 5:
+```
+load left 37	// set LEFT to 37
+load right 5	// set RIGHT to 5 to compare against
+jump mod5_loop	// skip data section
+
+// data section
+37:	$37
+5:	$5
+result:	$hFFFF
+
+mod5_loop:	sub left 5
+		jumplg mod5_loop	// Start loop again if LEFT > RIGHT=5
+		jumpeq mod5_loop	// Start loop again if LEFT == RIGHT=5
+end:		store left result	// Store the result in memory cell marked as "result:"
+```
+
+You can make functions using tags and the ```ret``` instruction. Make sure that the last item on stack --
+which is the address from what the function was called -- stays the same!
 
 ## Mnemonics
-
+...
 
 ## Binary Instruction set
 ### Overview

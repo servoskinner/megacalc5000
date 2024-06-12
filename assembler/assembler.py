@@ -28,7 +28,7 @@ def assembly(filename: str, outname: str):
     program = program.lower()
     program = program[1:].split() # remove \0 from start and split
 
-    keywords = ["left", "right", "load", "store", "copy", "exch",
+    keywords = ["left", "right", "load", "store", "copy",
                 "add", "sub", "and", "or", "not", "halt", "jump",
                 "jumplg", "jumprg", "jumpeq", "push", "pop", "call",
                 "ret", "feed", "seed"]   

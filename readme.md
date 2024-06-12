@@ -2,6 +2,7 @@
 ## About
 this is a primitive 16 bit microprocessor model with following features:
 - two equivalent general-purpose registers: ```LEFT``` and ```RIGHT```
+<<<<<<< Updated upstream
 - independent memory interface
 - stack and subroutine call support
 - half-assed pointer logic support
@@ -38,7 +39,7 @@ A word that starts with ```$``` and signifies a number is a **constant** that is
 Normally, it is treated as a decimal number; use ```$h``` for hexadecimal and ```$b``` for binary numbers.
 
 **Tag names** must not begin with an ```$```, end with ```:```, contain spaces, tabs, or newlines, or match mnemonic keywords.
-Any other names, including numbers, are legal: you can use it to declare constants.
+Any other names, including numbers, are legal: you can use this to declare constants.
 
 Here is an implementation of modulo 5:
 ```
@@ -60,8 +61,65 @@ end:		store left result	// Store the result in memory cell marked as "result:"
 You can make functions using tags and the ```ret``` instruction. Make sure that the last item on stack --
 which is the address from what the function was called -- stays the same!
 
+You can tag any word in memory; you can also define multiple tags in a row
+to make them point to a common location.
+
+To use pointers to read or write continuous data, tag and modify the
+arguments of ```load``` and ```store``` instructions. The following program
+shows how to copy an array that ends with a 0 from one location to another:
+
+```
+jump start
+
+// data section
+array: 		$1 $4 $9 $16 $0
+copy_here:	$0 $0 $0 $0 $0
+arr_len:	$4
+
+counter:	$0
+terminator:	$0
+
+start:
+
+
+```
+
+
 ## Mnemonics
-...
+	
+### Memory manipulation
+- ```load [left/right] [addr]``` -- loads the value from given ```addr``` to register.
+- ```store [left/right] [addr]``` -- stores the value in register at ```addr```.
+- ```copy [left/right] [right/left]``` -- copies the value in one register to another.
+
+### Arithmetics
+- ```add [left/right] [addr]``` -- adds the value at ```addr``` to register.
+- ```add [left/right] [right/left]``` -- adds up contents of two registers and puts it to first one.
+
+- ```sub [left/right] [addr]``` -- subtracts the value at ```addr``` from register.
+- ```sub [left/right] [right/left]``` -- subtracts contents of one register from another and stores it to first one.
+
+### Execution Control
+- ```jump [addr]``` -- continue executing from ```addr``` on any condition.
+- ```jumplg [addr]``` -- continue executing from ```addr``` if ```left``` > ```right```.
+Otherwise, move on to next instruction.
+- ```jumprg [addr]``` -- continue executing from ```addr``` if ```right``` > ```left```.
+Otherwise, move on to next instruction.
+- ```jumpeq [addr]``` -- continue executing from ```addr``` if ```left``` == ```right```.
+Otherwise, move on to next instruction.
+- ```halt``` -- disable CPU.
+
+### Logic
+- ```and [left/right] [right/left]``` -- apply bitwise AND to two registers and store the result to first one.
+- ```or [left/right] [right/left]``` -- apply bitwise OR to two registers and store the result to first one.
+- ```not [left/right]``` -- bitwise invert a register's value.
+
+### Stack and Functions
+- ```push [left/right]``` -- place value from register onto stack.
+- ```pop [left/right]``` -- move top element of stack to register and erase it
+
+- ```call [addr]``` -- call subroutine starting at ```addr```.
+- ```ret``` -- finish subroutine and continue execution.
 
 ## Binary Instruction set
 ### Overview
@@ -76,6 +134,32 @@ For example, ```ADD0 0064``` adds the value stored at memory address
 ```0x0064``` to register ```LEFT```, replacing it with the result. Both words are treated as parts of a single
 command and retrieved from memory sequentially. Therefore, the command pointer
 is normally advanced 2 cells forward.
+=======
+- pointer logic support
+- stack and subroutine call support (TBA)
+
+## Programming
+	Programs are written using mnemonics and then assembled into machine-readable binaries using
+	**assembler.py**. Execution starts from the command at address ```0x0000```.
+
+	Variables, functions, and jump locations are declared using **tags**: any word that does not
+	match to any of mnemonics and ends with a **colon (:)** assigns a name to the address it is
+	written at. To reference it in the program, use its name without the colon:
+
+	```
+	loop:	add left right
+	
+			jump loop
+	```
+
+	**Literals** can be declared using the **$** sign, optionally followed by "b" or "h" to
+	specify the values in binary or hexadecimal respectively.
+
+
+## Mnemonics
+
+- ```load [reg] [addr]```
+>>>>>>> Stashed changes
 
 Other commands, especially those that do not require accessing memory, 
 use only one word. For example, the ```1110``` overwrites all bits of ```LEFT```
@@ -84,6 +168,23 @@ a single-word command, the _instruction pointer_ is increased by 1 - the word
 that comes next is not skipped and is treated as the beginning of next command,
 so instructions are not always aligned by parity.
 
+	Instructions and data are stored in common memory space, which is loaded
+	with contents of  ```program.txt``` on startup. 
+	The first hex word in .txt denotes the length of program section; 
+	everything past it will be filled with 0000's. There's a total of 
+	_65536_ 16-bit memory cells at user's disposal. 
+	
+	Most commands consist of two words placed next to each other in memory - the command identifier and the argument;
+	
+	For example, ```ADD0 0064``` adds the value stored at memory address
+	```0x0064``` to ```LEFT``` register. Both words are considered parts of one
+	command, so instruction pointer advances _2_ cells forward after executing it.
+	
+	On the other hand, the ```FA01``` command writes the value from ```LEFT```
+	to the address stored in ```RIGHT``` and does not require additional arguments.
+	it is therefore treated as single-word command, and instruction pointer is moved only _1_ memory space
+	forward after it is executed.
+	
 ### Loading/Storing
   
 - ```F000``` - move from LEFT to given addr
